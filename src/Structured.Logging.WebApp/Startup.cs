@@ -9,17 +9,38 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Sinks.Elasticsearch;
 
 namespace elastic
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
         public IConfiguration Configuration { get; }
+
+        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(hostingEnvironment.ContentRootPath)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{hostingEnvironment.EnvironmentName}.json", reloadOnChange: true, optional: true)
+                .AddEnvironmentVariables();
+
+            Configuration = builder.Build();
+
+            var elasticUri = Configuration["ElasticConfiguration:Uri"];
+
+            Log.Logger = new LoggerConfiguration()
+               .Enrich.FromLogContext()
+               .Enrich.WithExceptionDetails()
+               .Enrich.WithMachineName()
+               .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
+               {
+                   AutoRegisterTemplate = true,
+               })
+            .CreateLogger();
+        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -36,8 +57,10 @@ namespace elastic
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddSerilog();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
