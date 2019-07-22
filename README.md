@@ -18,8 +18,8 @@ Check http://localhost:5601/ (kibana) and http://localhost:9200/ (elastic)
 
 ### Open Solution and debug
 
-Open project in VSCode or Visual Studio for debug project hitting F5
-
+Open project in VSCode or Visual Studio for debug project hitting F5, then go to https://localhost:5001 or
+http://localhost:5000
 
 ### TODO List
 - Add Seq filter 
